@@ -43,6 +43,8 @@ class DownloadConfig:
     skip_download: bool
     skip_metadata: bool
     format: Optional[str]
+    proxy: Optional[str]
+    cookies: Optional[str]
 
     def __init__(self) -> None:
         self.max_videos = None
@@ -51,6 +53,8 @@ class DownloadConfig:
         self.skip_download = False
         self.skip_metadata = False
         self.format = None
+        self.proxy = None
+        self.cookies = None
 
     def submit(self):
         """Submits configuration, this has the effect of normalising maximums to 0 properly"""
@@ -174,7 +178,7 @@ class Channel:
         # Decode and return
         return Channel._from_dict(encoded, path)
 
-    def metadata(self):
+    def metadata(self, config: DownloadConfig):
         """Queries YouTube for all channel metadata to refresh known videos"""
         # Print loading progress at the start without loading indicator so theres always a print
         msg = "Downloading metadata.."
@@ -183,7 +187,7 @@ class Channel:
         # Download metadata and give the user a spinner bar
         with ThreadPoolExecutor() as ex:
             # Make future for downloading metadata
-            future = ex.submit(self._download_metadata)
+            future = ex.submit(self._download_metadata, config)
 
             # Start spinning
             with PieSpinner(f"{msg} ") as bar:
@@ -212,7 +216,7 @@ class Channel:
         # Parse downloaded metadata
         self._parse_metadata(res)
 
-    def _download_metadata(self) -> dict[str, Any]:
+    def _download_metadata(self, config: DownloadConfig) -> dict[str, Any]:
         """Downloads metadata dict and returns for further parsing"""
         # Construct downloader
         settings = {
@@ -225,6 +229,12 @@ class Channel:
             # First download "flat", then extract_info for each video, to support large channels/playlists (#71 <https://github.com/Owez/yark/issues/71>)
             "extract_flat":True
         }
+
+        if config.proxy is not None:
+            settings["proxy"] = config.proxy
+
+        if config.cookies is not None:
+            settings["cookiefile"] = config.cookies
 
         # Get response and snip it
         with YoutubeDL(settings) as ydl:
@@ -276,7 +286,7 @@ class Channel:
 
 
                 elif res["entries"][index]["_type"] == "url":
-                    url = res["entries"][index]["url"] 
+                    url = res["entries"][index]["url"]
                     for i in range(3):
                         try:
                             entry = ydl.extract_info(url, download=False)
@@ -350,6 +360,12 @@ class Channel:
         }
         if config.format is not None:
             settings["format"] = config.format
+
+        if config.proxy is not None:
+            settings["proxy"] = config.proxy
+
+        if config.cookies is not None:
+            settings["cookiefile"] = config.cookies
 
         # Attach to the downloader
         with YoutubeDL(settings) as ydl:

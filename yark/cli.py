@@ -108,6 +108,13 @@ def _cli():
                 elif config_arg.startswith("--format="):
                     config.format = parse_value(config_arg)
 
+                # Custom yt-dlp proxy
+                elif config_arg.startswith("--proxy="):
+                    config.proxy = parse_value(config_arg)
+
+                elif config_arg.startswith("--cookies="):
+                    config.cookies = parse_value(config_arg)
+
                 # Unknown argument
                 else:
                     print(HELP, file=sys.stderr)
@@ -125,7 +132,7 @@ def _cli():
             if config.skip_metadata:
                 print("Skipping metadata download..")
             else:
-                channel.metadata()
+                channel.metadata(config)
                 channel.commit()  # NOTE: Do it here no matter, because it's metadata. Downloads do not modify the archive
             if config.skip_download:
                 print("Skipping videos/livestreams/shorts download..")
